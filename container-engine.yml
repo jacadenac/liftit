@@ -1,0 +1,10 @@
+version: '1'
+services:
+  web:
+    build: .
+    ports:
+     - "18080:8080"
+    links:
+     - db
+  db:
+    image: postgres

@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"errors"
 	"github.com/gorilla/mux"
-	//"../config"
 	"log"
 	"github.com/jacadenac/liftit/config"
 )

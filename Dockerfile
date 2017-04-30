@@ -1,7 +1,3 @@
-FROM golang:latest
-
-# Install the  dependencies
-RUN go get github.com/gorilla/mux
-
-MAINTAINER jacadenac@unal.edu.co
-EXPOSE 8080
+FROM golang:onbuild
+# MAINTAINER jacadenac@unal.edu.co
+EXPOSE 9000

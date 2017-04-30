@@ -7,7 +7,7 @@ var Content_type string
 
 func init(){
 	Server = "localhost"
-	Port = ":8080"
-	Api_root = "/api/"
+	Port = ":9000"
+	Api_root = "/"
 	Content_type = "application/json"
 }
