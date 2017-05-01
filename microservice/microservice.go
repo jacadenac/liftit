@@ -82,10 +82,10 @@ func consuming(routing_key string, bdtransaction func(request []byte)(response [
 			response, _ := bdtransaction(d.Body)
 
 			err = ch.Publish(
-				"",        // exchange
-				d.ReplyTo, // routing key
-				false,     // mandatory
-				false,     // immediate
+				"",        	// exchange
+				d.ReplyTo, 		// routing key
+				false,     	// mandatory
+				false,     	// immediate
 				amqp.Publishing{
 					ContentType:   config.Content_type,
 					CorrelationId: d.CorrelationId,

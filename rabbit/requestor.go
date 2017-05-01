@@ -8,24 +8,24 @@ import (
 	"github.com/jacadenac/liftit/config"
 )
 
-var Conn *amqp.Connection
-var Ch *amqp.Channel
-var queue amqp.Queue
-var messages <-chan amqp.Delivery
-var err error
+//var Conn *amqp.Connection
+//var Ch *amqp.Channel
+//var queue amqp.Queue
+//var messages <-chan amqp.Delivery
+//var err error
 
 func Publish(routing_key string, request []byte) (response []byte, err error){
 
-	Conn, err = amqp.Dial(*config.AmqpURI)
+	conn, err := amqp.Dial(*config.AmqpURI)
 	logging.FailOnError(err, "Failed to connect to RabbitMQ")
-	defer Conn.Close()
+	defer conn.Close()
 
 
-	Ch, err = Conn.Channel()
+	ch, err := conn.Channel()
 	logging.FailOnError(err, "Failed to open a channel")
-	defer Ch.Close()
+	defer ch.Close()
 
-	queue, err = Ch.QueueDeclare(
+	queue, err := ch.QueueDeclare(
 		"",    // name
 		false, // durable
 		false, // delete when usused
@@ -35,7 +35,7 @@ func Publish(routing_key string, request []byte) (response []byte, err error){
 	)
 	logging.FailOnError(err, "Failed to declare a queue")
 
-	messages, err = Ch.Consume(
+	messages, err := ch.Consume(
 		queue.Name, // queue
 		"",     // consumer
 		true,   // auto-ack
@@ -47,7 +47,7 @@ func Publish(routing_key string, request []byte) (response []byte, err error){
 	logging.FailOnError(err, "Failed to register a consumer")
 
 	corrId := randomString(32)
-	err = Ch.Publish(
+	err = ch.Publish(
 		"",          	// exchange
 		routing_key, 		// routing key
 		false,       	// mandatory
