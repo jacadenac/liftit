@@ -1,15 +1,15 @@
-package services
+package api
 
 import (
-	"net/http"
-	"github.com/gorilla/mux"
-	"encoding/json"
 	"log"
+	"sync"
+	"net/http"
+	"encoding/json"
+	"github.com/gorilla/mux"
 	"github.com/jacadenac/liftit/config"
 	"github.com/jacadenac/liftit/contracts"
-	"sync"
 	"github.com/jacadenac/liftit/logging"
-	"github.com/jacadenac/liftit/rabbit"
+	"github.com/jacadenac/liftit/phoenix/requestor"
 )
 
 //Se implementa estructura usuarioServ bajo patron singleton
@@ -42,7 +42,7 @@ func (usuario_serv *usuarioServ)getRouteName() string{
 func (usuario_serv *usuarioServ)getHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", config.Content_type)
 	w.Header().Set(config.Access_control.Key, config.Access_control.Value)
-	usuarios, err := rabbit.Publish("GET", []byte(`{}`))
+	usuarios, err := requestor.Publish("GET", []byte(`{}`))
 	//j, err := json.Marshal(usuarios)
 	if !checkError(err, w, r) {
 		w.WriteHeader(http.StatusOK)
@@ -58,19 +58,15 @@ func (usuario_serv *usuarioServ)getByIDHandler(w http.ResponseWriter, r *http.Re
 	type Param struct{
 		ID string
 	}
-	println("getbyid paso1 ID =", vars["ID"])
 	id_struct := Param{vars["ID"]}
 	payload, err := json.Marshal(id_struct)
 	//logging.FailOnError(err, "Failed to marshal JSON")
-	println("getbyid paso2 -> ",[]byte(payload))
+	usuario, err := requestor.Publish("GETBYID", []byte(payload))
 
-	usuario, err := rabbit.Publish("GETBYID", []byte(payload))
-	println("getbyid paso3")
 	logging.FailOnError(err, "Failed to marshal JSON")
-	println("getbyid paso4")
+
 	w.WriteHeader(http.StatusOK)
 	w.Write(usuario)
-	println("getbyid paso5")
 
 	/*
 	if usuario, ok := contracts.UsuarioStore[ID]; ok {
@@ -91,8 +87,9 @@ func (usuario_serv *usuarioServ)postHandler(w http.ResponseWriter, r *http.Reque
 	w.Header().Set(config.Access_control.Key, config.Access_control.Value)
 	var usuario contracts.Usuario
 	err := json.NewDecoder(r.Body).Decode(&usuario)
+	log.Println("usuario a crear: ",usuario)
 	payload, err := json.Marshal(usuario)
-	data, err := rabbit.Publish("POST", payload)
+	data, err := requestor.Publish("POST", payload)
 	logging.FailOnError(err, "Failed to marshal JSON")
 	w.WriteHeader(http.StatusCreated)
 	w.Write(data)

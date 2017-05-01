@@ -1,6 +1,8 @@
 package config
 
-import "flag"
+import (
+	"flag"
+)
 
 var Server Host
 var Client Host

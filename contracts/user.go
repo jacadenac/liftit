@@ -10,16 +10,29 @@ var UsuarioStore = make(map[string]Usuario)
 var ID int
 
 type Usuario struct {
+	Nombre		string		`json:"nombre"`
+	Email		string		`json:"description"`
+	Password 	string		`json:"password"`
+	Verificado	bool		`json:"verificado"`
+	Telefono	int		`json:"telefono"`
+	Pais		string		`json:"pais"`
+	Ciudad		string		`json:"ciudad"`
+	Direccion	string		`json:"direccion"`
+	CreatedAt 	time.Time 	`json:"created_at"`
+}
+/*
+type Usuario struct {
 	Nombre		string		`json:"nombre" binding:"required"`
 	Email		string		`json:"description" binding:"required"`
 	Password 	string		`json:"password" binding:"required"`
-	Verificado	bool		`json:"verificado,omitempty"`
+	Verificado	bool		`json:"verificado, omitempty"`
 	Telefono	int		`json:"telefono" binding:"required"`
-	Pais		string		`json:"pais",omitempty`
-	Ciudad		string		`json:"Ciudad",omitempty`
-	Direccion	string		`json:"Direccion",omitempty`
-	CreatedAt 	time.Time 	`json:"created_at,omitempty"`
+	Pais		string		`json:"pais, omitempty"`
+	Ciudad		string		`json:"ciudad, omitempty"`
+	Direccion	string		`json:"direccion, omitempty"`
+	CreatedAt 	time.Time 	`json:"created_at, omitempty"`
 }
+*/
 
 type omit *struct{}
 type UsuarioPublico struct {

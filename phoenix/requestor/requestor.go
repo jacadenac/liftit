@@ -1,4 +1,4 @@
-package rabbit
+package requestor
 
 import (
 	"time"
@@ -8,24 +8,20 @@ import (
 	"github.com/jacadenac/liftit/config"
 )
 
-//var Conn *amqp.Connection
-//var Ch *amqp.Channel
-//var queue amqp.Queue
-//var messages <-chan amqp.Delivery
-//var err error
+var Conn *amqp.Connection
+var Ch *amqp.Channel
+var messages <-chan amqp.Delivery
 
 func Publish(routing_key string, request []byte) (response []byte, err error){
-
-	conn, err := amqp.Dial(*config.AmqpURI)
+	Conn, err = amqp.Dial(*config.AmqpURI)
 	logging.FailOnError(err, "Failed to connect to RabbitMQ")
-	defer conn.Close()
+	defer Conn.Close()
 
-
-	ch, err := conn.Channel()
+	Ch, err = Conn.Channel()
 	logging.FailOnError(err, "Failed to open a channel")
-	defer ch.Close()
+	defer Ch.Close()
 
-	queue, err := ch.QueueDeclare(
+	cola_respuestas, err := Ch.QueueDeclare(
 		"",    // name
 		false, // durable
 		false, // delete when usused
@@ -33,10 +29,11 @@ func Publish(routing_key string, request []byte) (response []byte, err error){
 		false, // noWait
 		nil,   // arguments
 	)
-	logging.FailOnError(err, "Failed to declare a queue")
+	//log.Println("Requestor: creó una cola con nombre = ", cola_respuestas.Name)
+	logging.FailOnError(err, "Failed to declare a cola_respuestas")
 
-	messages, err := ch.Consume(
-		queue.Name, // queue
+	messages, err = Ch.Consume(
+		cola_respuestas.Name, // queue
 		"",     // consumer
 		true,   // auto-ack
 		false,  // exclusive
@@ -45,9 +42,10 @@ func Publish(routing_key string, request []byte) (response []byte, err error){
 		nil,    // args
 	)
 	logging.FailOnError(err, "Failed to register a consumer")
+	//log.Println("Creó consumidor de cola_respuestas = ", cola_respuestas.Name)
 
 	corrId := randomString(32)
-	err = ch.Publish(
+	err = Ch.Publish(
 		"",          	// exchange
 		routing_key, 		// routing key
 		false,       	// mandatory
@@ -55,13 +53,18 @@ func Publish(routing_key string, request []byte) (response []byte, err error){
 		amqp.Publishing{
 			ContentType:   config.Content_type,
 			CorrelationId: corrId,
-			ReplyTo:       queue.Name,
+			ReplyTo:       cola_respuestas.Name,
 			Body:          []byte(request),
 		})
 	logging.FailOnError(err, "Failed to publish a message")
+	//log.Println("¡Envió mensaje!")
+	//log.Println("d.ReplyTo = ", cola_respuestas.Name)
+	//log.Println("d.CorrelationId = ", corrId)
 
 	for d := range messages {
 		if corrId == d.CorrelationId {
+			//log.Printf("¡Llegó una respuesta!")
+			//log.Println("d.CorrelationId = ", d.CorrelationId)
 			response = []byte(d.Body)
 			break
 		}
