@@ -7,6 +7,10 @@ import (
 	"github.com/jacadenac/liftit/logging"
 	"net/http"
 	"github.com/jacadenac/liftit/contracts"
+	"github.com/jacadenac/liftit/config"
+	"time"
+	"strconv"
+	"flag"
 )
 
 var conn *amqp.Connection
@@ -24,13 +28,12 @@ func fib(n int) int {
 }
 
 func main() {
-	println("paso1")
+	flag.Parse()
 	consuming("GET", Get)
-	println("paso10")
 	consuming("GETBYID", GetById)
-	consuming("POST", Post)
-	consuming("PUT", Put)
-	consuming("DELETE", Put)
+	//consuming("POST", Post)
+	//consuming("PUT", Put)
+	//consuming("DELETE", Put)
 }
 
 
@@ -43,26 +46,21 @@ func consuming(routing_key string, bdtransaction func(request []byte)(response [
 	logging.FailOnError(err, "Failed to open a channel")
 	defer ch.Close()
 
-	println("paso2")
 	q, err := ch.QueueDeclare(
-		routing_key, 		// name
+		routing_key,		// name
 		false,       	// durable
 		false,       	// delete when usused
 		false,       	// exclusive
 		false,       	// no-wait
 		nil,         	// arguments
 	)
-	println("paso2.1")
 	logging.FailOnError(err, "Failed to declare a queue")
-	println("paso3")
 	err = ch.Qos(
 		1,     	// prefetch count
 		0,     	// prefetch size
 		false, 		// global
 	)
-	println("paso3.1")
 	logging.FailOnError(err, "Failed to set QoS")
-	println("paso4")
 	msgs, err := ch.Consume(
 		q.Name, 		// queue
 		"",     	// consumer
@@ -72,9 +70,7 @@ func consuming(routing_key string, bdtransaction func(request []byte)(response [
 		false,  		// no-wait
 		nil,    		// args
 	)
-	println("paso4.1")
 	logging.FailOnError(err, "Failed to register a consumer")
-	println("paso5")
 	forever := make(chan bool)
 
 	go func() {
@@ -91,7 +87,7 @@ func consuming(routing_key string, bdtransaction func(request []byte)(response [
 				false,     // mandatory
 				false,     // immediate
 				amqp.Publishing{
-					ContentType:   "text/plain",
+					ContentType:   config.Content_type,
 					CorrelationId: d.CorrelationId,
 					Body:          response,
 				})
@@ -123,9 +119,12 @@ func GetById(request []byte)(response []byte, httpStatus int) {
 	var param Param
 	err := json.Unmarshal(request, &param)
 	logging.FailOnError(err, "Failed to convert body to json")
-
 	if usuario, ok := contracts.UsuarioStore[param.ID]; ok {
-		response, err = json.Marshal(usuario)
+		usuario_privado, err := json.Marshal(usuario)
+		var usuario_publico contracts.UsuarioPublico
+		err = json.Unmarshal(usuario_privado, &usuario_publico)
+		response, err = json.Marshal(usuario_publico)
+
 		logging.FailOnError(err, "Failed to convert usuario to json")
 		httpStatus = http.StatusOK
 	} else {
@@ -137,7 +136,14 @@ func GetById(request []byte)(response []byte, httpStatus int) {
 
 func Post(request []byte)(response []byte, httpStatus int) {
 	//err := json.Unmarshal(request, contract)
-	response = []byte(`{"Post":"usuario registrado"}`)
+	var usuario contracts.Usuario
+	err := json.Unmarshal(request, &usuario)
+	logging.FailOnError(err, "Failed to convert json to usuario")
+	usuario.CreatedAt = time.Now()
+	contracts.ID++
+	k := strconv.Itoa(contracts.ID)
+	contracts.UsuarioStore[k] = usuario
+	response, err = json.Marshal(usuario)
 	httpStatus = http.StatusCreated
 	return
 }
