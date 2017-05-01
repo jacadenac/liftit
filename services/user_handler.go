@@ -8,10 +8,10 @@ import (
 	"time"
 	"strconv"
 	"github.com/jacadenac/liftit/config"
-	"github.com/jacadenac/liftit/models"
-	//"../models"
-	//"../config"
+	"github.com/jacadenac/liftit/contracts"
 	"sync"
+	"github.com/jacadenac/liftit/logging"
+	"github.com/jacadenac/liftit/rabbit"
 )
 
 //Se implementa estructura usuarioServ bajo patron singleton
@@ -43,23 +43,33 @@ func (usuario_serv *usuarioServ)getRouteName() string{
 //getHandler - GET
 func (usuario_serv *usuarioServ)getHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", config.Content_type)
-	usuarios := []models.Usuario{}
-	for _, v := range models.UsuarioStore {
-		usuarios = append(usuarios, v)
-	}
-	j, err := json.Marshal(usuarios)
+	w.Header().Set(config.Access_control.Key, config.Access_control.Value)
+	usuarios, err := rabbit.Publish("GET", []byte(`{}`))
+	//j, err := json.Marshal(usuarios)
 	if !checkError(err, w, r) {
 		w.WriteHeader(http.StatusOK)
-		w.Write(j)
+		w.Write(usuarios)
 	}
 }
 
 //getByIDHandler - GET
 func (usuario_serv *usuarioServ)getByIDHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", config.Content_type)
+	w.Header().Set(config.Access_control.Key, config.Access_control.Value)
 	vars := mux.Vars(r)
-	ID := vars["ID"]
-	if usuario, ok := models.UsuarioStore[ID]; ok {
+	type ID struct{
+		id string
+	}
+	payload, err := json.Marshal(ID{vars["ID"]})
+	logging.FailOnError(err, "Failed to marshal JSON")
+
+	usuario, err := rabbit.Publish("GETBYID", payload)
+	if !checkError(err, w, r) {
+		w.WriteHeader(http.StatusOK)
+		w.Write(usuario)
+	}
+	/*
+	if usuario, ok := contracts.UsuarioStore[ID]; ok {
 		j, err := json.Marshal(usuario)
 		if !checkError(err, w, r) {
 			w.WriteHeader(http.StatusOK)
@@ -68,18 +78,20 @@ func (usuario_serv *usuarioServ)getByIDHandler(w http.ResponseWriter, r *http.Re
 	} else {
 		w.WriteHeader(http.StatusNotFound)
 	}
+	*/
 }
 
 //postHandler - POST
 func (usuario_serv *usuarioServ)postHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", config.Content_type)
-	var usuario models.Usuario
+	w.Header().Set(config.Access_control.Key, config.Access_control.Value)
+	var usuario contracts.Usuario
 	err := json.NewDecoder(r.Body).Decode(&usuario)
 	if !checkError(err, w, r) {
 		usuario.CreatedAt = time.Now()
-		models.ID++
-		k := strconv.Itoa(models.ID)
-		models.UsuarioStore[k] = usuario
+		contracts.ID++
+		k := strconv.Itoa(contracts.ID)
+		contracts.UsuarioStore[k] = usuario
 		j, err := json.Marshal(usuario)
 		if !checkError(err, w, r){
 			w.WriteHeader(http.StatusCreated)
@@ -91,15 +103,16 @@ func (usuario_serv *usuarioServ)postHandler(w http.ResponseWriter, r *http.Reque
 //putHandler - PUT
 func (usuario_serv *usuarioServ)putHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", config.Content_type)
+	w.Header().Set(config.Access_control.Key, config.Access_control.Value)
 	vars := mux.Vars(r)
 	ID := vars["ID"]
-	var usuarioUpdate models.Usuario
+	var usuarioUpdate contracts.Usuario
 	err := json.NewDecoder(r.Body).Decode(&usuarioUpdate)
 	if !checkError(err, w, r) {
-		if usuario, ok := models.UsuarioStore[ID]; ok {
+		if usuario, ok := contracts.UsuarioStore[ID]; ok {
 			usuarioUpdate.CreatedAt = usuario.CreatedAt
-			delete(models.UsuarioStore, ID)
-			models.UsuarioStore[ID] = usuarioUpdate
+			delete(contracts.UsuarioStore, ID)
+			contracts.UsuarioStore[ID] = usuarioUpdate
 			w.WriteHeader(http.StatusNoContent)
 		} else {
 			w.WriteHeader(http.StatusNotFound)
@@ -110,10 +123,11 @@ func (usuario_serv *usuarioServ)putHandler(w http.ResponseWriter, r *http.Reques
 //deleteUsuarioHandler - DELETE
 func (usuario_serv *usuarioServ)deleteHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", config.Content_type)
+	w.Header().Set(config.Access_control.Key, config.Access_control.Value)
 	vars := mux.Vars(r)
 	ID := vars["ID"]
-	if _, ok := models.UsuarioStore[ID]; ok {
-		delete(models.UsuarioStore, ID)
+	if _, ok := contracts.UsuarioStore[ID]; ok {
+		delete(contracts.UsuarioStore, ID)
 		w.WriteHeader(http.StatusNoContent)
 	} else {
 		log.Println("Not found")
