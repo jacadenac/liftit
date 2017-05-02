@@ -2,15 +2,9 @@ package api
 
 import (
 	"net/http"
-	"errors"
 	"github.com/gorilla/mux"
 	"log"
 	"github.com/jacadenac/liftit/config"
-)
-
-var (
-	//ErrorFormatoJson ...
-	ErrorUsuarioNoValido = errors.New("ErrorFormatoJson")
 )
 
 type InterfaceAPIHandler interface {

@@ -4,35 +4,33 @@ import (
 	"time"
 	"strconv"
 	//"golang.org/x/crypto/bcrypt"
+	"encoding/json"
+	"github.com/jacadenac/liftit/logging"
 )
 
 var UsuarioStore = make(map[string]Usuario)
 var ID int
 
 type Usuario struct {
-	Nombre		string		`json:"nombre"`
-	Email		string		`json:"description"`
-	Password 	string		`json:"password"`
-	Verificado	bool		`json:"verificado"`
-	Telefono	int		`json:"telefono"`
-	Pais		string		`json:"pais"`
-	Ciudad		string		`json:"ciudad"`
-	Direccion	string		`json:"direccion"`
-	CreatedAt 	time.Time 	`json:"created_at"`
-}
-/*
-type Usuario struct {
-	Nombre		string		`json:"nombre" binding:"required"`
-	Email		string		`json:"description" binding:"required"`
+	Nombre		string		`json:"nombre, required"`
+	Email		string		`json:"email" binding:"required"`
 	Password 	string		`json:"password" binding:"required"`
 	Verificado	bool		`json:"verificado, omitempty"`
 	Telefono	int		`json:"telefono" binding:"required"`
 	Pais		string		`json:"pais, omitempty"`
 	Ciudad		string		`json:"ciudad, omitempty"`
 	Direccion	string		`json:"direccion, omitempty"`
-	CreatedAt 	time.Time 	`json:"created_at, omitempty"`
+	FechaCreado	time.Time 	`json:"fecha_creado, omitempty"`
 }
-*/
+func (usuario* Usuario)ToJson()(json_payload []byte) {
+	json_payload, err := json.Marshal(usuario)
+	logging.FailOnError(err, "Error encoding Usuario struct")
+	return
+}
+func (usuario* Usuario)Set(json_payload []byte){
+	err := json.Unmarshal(json_payload, usuario)
+	logging.FailOnError(err, "Failed to convert json to Usuario")
+}
 
 type omit *struct{}
 type UsuarioPublico struct {
